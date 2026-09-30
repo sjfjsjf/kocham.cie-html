@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>LOVE ❤️</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #000;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+canvas {
+    display: block;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="canvas"></canvas>
+
+<script>
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+
+// ==============================
+// ROZMIAR EKRANU
+// ==============================
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+
+resize();
+
+window.addEventListener("resize", resize);
+
+
+// ==============================
+// USTAWIENIA
+// ==============================
+
+const COUNT = 900;
+
+// czas tworzenia serca
+const FORM_TIME = 4000;
+
+// opóźnienie pojawiania się napisów
+const MAX_DELAY = 1800;
+
+// obrót 1,5× szybszy
+const ROTATION_SPEED = 0.050;
+
+
+// ==============================
+// PUNKTY SERCA
+// ==============================
+
+const particles = [];
+
+for (let i = 0; i < COUNT; i++) {
+
+    const t = Math.random() * Math.PI * 2;
+
+    // dzięki temu napisy są rozłożone
+    // również wewnątrz serca
+    const r = Math.sqrt(Math.random());
+
+    const x =
+        16 *
+        Math.pow(Math.sin(t), 3) *
+        r;
+
+    const y =
+        (
+            13 * Math.cos(t)
+            - 5 * Math.cos(2 * t)
+            - 2 * Math.cos(3 * t)
+            - Math.cos(4 * t)
+        ) * r;
+
+
+    particles.push({
+
+        // docelowa pozycja
+        targetX: x,
+        targetY: y,
+
+        // miejsce startowe
+        startX:
+            (Math.random() - 0.5) * 90,
+
+        startY:
+            (Math.random() - 0.5) * 70,
+
+        // głębokość 3D
+        z:
+            (Math.random() - 0.5) * 8,
+
+        // każdy napis zaczyna w innym momencie
+        delay:
+            Math.random() * MAX_DELAY,
+
+        // różne rozmiary LOVE
+        size:
+            Math.random() * 4 + 7
+    });
+}
+
+
+// ==============================
+// ZMIENNE ANIMACJI
+// ==============================
+
+let rotation = 0;
+let startTime = null;
+
+
+// ==============================
+// ANIMACJA
+// ==============================
+
+function animate(time) {
+
+    if (!startTime) {
+        startTime = time;
+    }
+
+
+    // wyczyszczenie ekranu
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    // ==========================
+    // POZYCJA SERCA
+    // ==========================
+
+    const centerX =
+        canvas.width / 2;
+
+    const centerY =
+        canvas.height * 0.42;
+
+
+    // wielkość serca
+    const scale =
+        Math.min(
+            canvas.width,
+            canvas.height
+        ) / 38;
+
+
+    // ==========================
+    // OBRÓT 3D
+    // ==========================
+
+    rotation += ROTATION_SPEED;
+
+
+    // ==========================
+    // RYSOWANIE LOVE
+    // ==========================
+
+    particles.forEach(p => {
+
+
+        // czas od rozpoczęcia animacji
+        const elapsed =
+            time -
+            startTime -
+            p.delay;
+
+
+        // postęp tworzenia
+        let progress =
+            elapsed / FORM_TIME;
+
+
+        progress =
+            Math.max(
+                0,
+                Math.min(1, progress)
+            );
+
+
+        // płynne tworzenie
+        const ease =
+            1 -
+            Math.pow(
+                1 - progress,
+                3
+            );
+
+
+        // ruch z losowego miejsca
+        // do kształtu serca
+        const x =
+            p.startX * (1 - ease)
+            +
+            p.targetX * ease;
+
+        const y =
+            p.startY * (1 - ease)
+            +
+            p.targetY * ease;
+
+
+        // ==========================
+        // OBRÓT W PRZESTRZENI 3D
+        // ==========================
+
+        const rotatedX =
+            x * Math.cos(rotation)
+            -
+            p.z * Math.sin(rotation);
+
+
+        const rotatedZ =
+            x * Math.sin(rotation)
+            +
+            p.z * Math.cos(rotation);
+
+
+        // ==========================
+        // PERSPEKTYWA
+        // ==========================
+
+        const perspective =
+            1 /
+            (1 + rotatedZ * 0.035);
+
+
+        const screenX =
+            centerX
+            +
+            rotatedX
+            *
+            scale
+            *
+            perspective;
+
+
+        const screenY =
+            centerY
+            -
+            y
+            *
+            scale
+            *
+            perspective;
+
+
+        // wielkość napisu
+        const fontSize =
+            Math.max(
+                6,
+                p.size * perspective
+            );
+
+
+        // ==========================
+        // RYSOWANIE LOVE
+        // ==========================
+
+        ctx.save();
+
+        ctx.font =
+            `bold ${fontSize}px Arial`;
+
+        ctx.textAlign =
+            "center";
+
+        ctx.textBaseline =
+            "middle";
+
+
+        // czerwony kolor
+        ctx.fillStyle =
+            "rgba(130, 0, 0, 0.9)";
+
+
+        // delikatna poświata
+        ctx.shadowColor =
+            "rgba(150, 0, 0, 0.6)";
+
+        ctx.shadowBlur = 5;
+
+
+        ctx.fillText(
+            "LOVE",
+            screenX,
+            screenY
+        );
+
+
+        ctx.restore();
+
+    });
+
+
+    // ==============================
+    // NAPIS "KOCHAM CIĘ KOTKU"
+    // ==============================
+
+    // napis pojawia się po zakończeniu
+    // tworzenia serca
+
+    let textProgress =
+        (
+            time -
+            startTime -
+            5000
+        ) / 1200;
+
+
+    textProgress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                textProgress
+            )
+        );
+
+
+    if (textProgress > 0) {
+
+        ctx.save();
+
+
+        // pozycja napisu
+        // po prawej stronie serca
+
+        const textX =
+            centerX +
+            scale * 18;
+
+        const textY =
+            centerY;
+
+
+        // płynne pojawianie
+        ctx.globalAlpha =
+            textProgress;
+
+
+        ctx.font =
+            "bold 32px Arial";
+
+
+        ctx.textAlign =
+            "left";
+
+        ctx.textBaseline =
+            "middle";
+
+
+        // kolor
+        ctx.fillStyle =
+            "#8b0000";
+
+
+        // delikatne świecenie
+        ctx.shadowColor =
+            "#500000";
+
+        ctx.shadowBlur =
+            8;
+
+
+        // tekst
+        ctx.fillText(
+            "Kocham Cię Kotku",
+            textX,
+            textY
+        );
+
+
+        ctx.restore();
+
+    }
+
+
+    // kolejna klatka
+    requestAnimationFrame(
+        animate
+    );
+}
+
+
+// ==============================
+// START
+// ==============================
+
+requestAnimationFrame(
+    animate
+);
+
+</script>
+
+</body>
+</html>
